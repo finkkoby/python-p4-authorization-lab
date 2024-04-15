@@ -3,6 +3,7 @@
 from flask import Flask, make_response, jsonify, request, session
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
+from flask_cors import CORS
 
 from models import db, Article, User
 
@@ -17,6 +18,8 @@ migrate = Migrate(app, db)
 db.init_app(app)
 
 api = Api(app)
+
+CORS(app)
 
 class ClearSession(Resource):
 
@@ -87,12 +90,19 @@ class CheckSession(Resource):
 class MemberOnlyIndex(Resource):
     
     def get(self):
-        pass
+        if not session['user_id']:
+            return {'error': 'unauthorized'}, 401
+        
+        articles = [article.to_dict() for article in Article.query.all() if article.is_member_only]
+        return make_response(articles, 200)
 
 class MemberOnlyArticle(Resource):
     
     def get(self, id):
-        pass
+        if not session['user_id']:
+            return {'error': 'unauthorized'}, 401
+        article = Article.query.filter(Article.id == id).first()
+        return make_response(article.to_dict(), 200)
 
 api.add_resource(ClearSession, '/clear', endpoint='clear')
 api.add_resource(IndexArticle, '/articles', endpoint='article_list')
